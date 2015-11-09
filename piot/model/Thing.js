@@ -29,10 +29,10 @@ var Thing = model.define('Thing', {
     }
 });
 Thing._getOne = function (id, callback) {
-    exports.findById(id).then(
+    Thing.findById(id).then(
         function (results) { callback(null, results); },
         function (error) { callback(error); });
 };
-Thing.sync({ force: true });
+Thing.sync();
 
 module.exports = Thing;

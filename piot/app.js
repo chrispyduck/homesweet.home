@@ -3,12 +3,12 @@
 var winston = require('winston');
 winston.log('info', 'Application starting...');
 
+var Q = require('q');
+Q.longStackSupport = true;
+
 var express = require('express');
-
 var app = express();
-
-var logger = require('morgan');
-app.use(logger('combined'));
+app.use(require('morgan')('combined'));
 
 var bodyParser = require('body-parser');
 app.use(bodyParser.json());

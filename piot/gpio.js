@@ -1,62 +1,66 @@
 ﻿"use strict";
 
+var Q = require('q');
+
 var gpio;
 if (process.arch == 'arm')
-    gpio = require('pi-gpio');
-else
+    gpio = require('pi-gpio-promise');
+else {
     gpio = {
-        open: function (pin, callback) { callback(); },
-        close: function (pin, direction, callback) { callback(); },
-        read: function (pin, callback) { callback(null, true); }
+        open: function () { return Q(0); },
+        close: function () { return Q(0); },
+        read: function () { return Q(true); },
+        write: function () { return Q(0); }
     };
+}
 
 var winston = require('winston');
-var Step = require('step');
 
-var state = {};
-var getConfiguredPin = function (thing, callback) {
-    var configured = state[thing.gpioPin];
-    
-    // if we need to reconfigure the pin, close it first
-    if (configured && configured != thing.gpioDirection) {
-        winston.log('info', 'closing gpio pin %s due to reconfiguration', thing.gpioPin);
-        gpio.close(thing.gpioPin, function (error) {
-            state[thing.gpioPin] = false;
-            getConfiguredPin(thing, callback);
-        })
-        return;
-    }
-    
-    // if the pin isn't open, open it
-    if (!configured) {
-        winston.log('info', 'opening gpio pin %s as "%s"', thing.gpioPin, thing.gpioDirection);
-        gpio.open(thing.gpioPin, thing.gpioDirection, function (error) {
-            if (!error)
-                state[thing.gpioPin] = thing.gpioDirection;
-            else
-                state[thing.gpioPin] = false;
-            callback(error);
-        });
-    }
-    else
-        callback(null);
-};
 
-exports.queryValue = function (thing, callback) {
-    Step(
-        Step.fn(getConfiguredPin, thing, this),
-        function (error) {
-            if (error)
-                callback('Error opening GPIO pin: ' + error);
-            gpio.read(thing.gpioPin, this);
-        },
-        function (error, value) {
-            if (error)
-                callback('Error reading GPIO value: ' + error);
-            thing.currentValue = value;
-            callback(null);
+function PinManager() {
+    var pins = {};
+
+    var fromThingSync = function (thing) {
+        var pin = pins[thing];
+        if (!pin) {
+            pin = new Pin(thing.gpioPin, thing.gpioDirection);
+            pins[thing] = pin;
+        } else if (pin.id != thing.gpioPin || pin.direction != thing.gpioDirection) {
+            winston.log('info', 'reopening gpio pin %s due to reconfiguration', thing.gpioPin);
+            return pin.reopen();
         }
-    );
+        return pin;
+    };
+
+    this.fromThing = function (thing) {
+        return Q.fcall(fromThingSync, thing);
+    };
 };
+module.exports = new PinManager();
 
+var Pin = function (id, direction) {
+    this.id = id;
+    this.direction = direction;
+    
+    var X = this;
 
+    this.open = function () {
+        winston.log('info', 'opening gpio pin %s as "%s"', X.id, X.direction);
+        return gpio.open(X.id, X.direction);
+    };
+    this.close = function () {
+        winston.log('info', 'closing gpio pin %s', X.id, X.direction);
+        return gpio.close(X.id);
+    };
+    this.reopen = function () {
+        return X.close().then(X.open);
+    };
+    this.getValue = function () {
+        return gpio.read(X.id);
+    };
+    this.setValue = function (value) {
+        return gpio.write(X.id, value);
+    };
+
+    this.open();
+};
