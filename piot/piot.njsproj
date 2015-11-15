@@ -13,7 +13,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>8ea6595a-96e1-4e1d-a053-9c68455879fb</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>bin\www</StartupFile>
+    <StartupFile>bin\piot</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -34,7 +34,7 @@
     <Compile Include="api\errorHandlers.js" />
     <Compile Include="api\things.js" />
     <Compile Include="app.js" />
-    <Compile Include="bin\www" />
+    <Compile Include="bin\piot" />
     <Compile Include="gpio.js" />
     <Compile Include="model\model.js" />
     <Compile Include="model\Thing.js" />
