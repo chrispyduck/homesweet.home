@@ -26,9 +26,10 @@ app.get('/things', things.getAll);
 app.put('/things', things.putOne);
 app.get('/things/:id', things.getOne);
 app.post('/things/:id', things.updateOne);
+app.delete('/things/:id', things.deleteOne);
 
 var errorHandlers = require('./api/errorHandlers.js');
-app.use(errorHandlers.notFound);
+//app.use(errorHandlers.notFound);
 app.use(errorHandlers.std);
 
 module.exports = app;

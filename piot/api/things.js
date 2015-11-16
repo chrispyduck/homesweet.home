@@ -42,6 +42,25 @@ exports.putOne = function (req, res) {
     }, function (error) { errorHandlers.std(error, req, res); });
 };
 
+exports.deleteOne = function (req, res) {
+    if (req.params.id == null) {
+        errorHandlers.badRequest('The "ID" parameter is required', res);
+        return;
+    }
+
+    Thing.findById(req.params.id)
+    .then(function (thing) {
+        if (!thing)
+            errorHandlers.notFound(req, res);
+        else
+            return thing.destroy();
+    }).then(function () {
+        res.status(200).json('ok');
+    }).catch(function (error) {
+        errorHandlers.std(error, req, res);
+    });
+};
+
 var updateOneSetValue = function (req, res, thing, value) {
     gpio.fromThing(thing)
     .then(function (pin) {

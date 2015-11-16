@@ -39,7 +39,7 @@ function PinManager() {
 module.exports = new PinManager();
 
 var Pin = function (id, direction) {
-    this.id = id;
+    this.id = parseInt(id, 10);
     this.direction = direction;
     
     var X = this;
@@ -56,9 +56,11 @@ var Pin = function (id, direction) {
         return X.close().then(X.open);
     };
     this.getValue = function () {
+	winston.log('info', 'reading value of gpio pin %s', X.id);
         return gpio.read(X.id);
     };
     this.setValue = function (value) {
+	winston.log('info', 'writing value of gpio pin %s = %s', X.id, value);
         return gpio.write(X.id, value);
     };
 
