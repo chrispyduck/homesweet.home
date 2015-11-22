@@ -23,6 +23,8 @@ exports.getOne = function (req, res) {
     var thing, pin;
     Thing.findById(req.params.id)
     .then(function (t) {
+        if (t == null)
+            throw new Error("The specified thing was not found");
         thing = t.dataValues;
         return gpio.fromThing(thing);
     }).then(function (p) {
@@ -77,22 +79,61 @@ exports.updateOne = function (req, res) {
         errorHandlers.badRequest('The "ID" parameter is required', res);
         return;
     }
+
+    var operation = typeof req.body.operation !== "undefined" ? req.body.operation : req.params.operation;
+    var value = typeof req.body.value !== "undefined" ? req.body.value : req.params.value;
     
     Thing.findById(req.params.id)
     .then(function (thing) {
         if (!thing)
             errorHandlers.notFound(req, res);
         else {
-            if (req.body.operation == 'set') {
-                if (typeof req.body.value === 'boolean')
-                    updateOneSetValue(req, res, thing, req.body.value);
+            if (operation == 'set') {
+                if (value == 'true')
+                    value = true;
+                else if (value == 'false')
+                    value = false;
+
+                if (typeof value === 'boolean')
+                    updateOneSetValue(req, res, thing, value);
                 else
                     errorHandlers.badRequest('The "value" parameter was invalid or missing', res);
             }
             else
-                errorHandlers.badRequest('The specified operation "' + req.body.operation + '" is invalid or unsupported', res);
+                errorHandlers.badRequest('The specified operation "' + operation + '" is invalid or unsupported', res);
         }
     }).catch(function (error) {
         errorHandlers.std(error, req, res);
+    });
+};
+
+exports.configureOne = function (req, res) {
+    if (req.params.id == null) {
+        errorHandlers.badRequest('The "ID" parameter is required', res);
+        return;
+    }
+    
+    var thing;
+    Thing.findById(req.params.id)
+    .then(function (t) {
+        if (t == null)
+            throw new Error("The specified thing was not found");
+        thing = t;
+
+        if (req.body.name)
+            thing.name = req.body.name;
+        if (req.body.type)
+            thing.type = req.body.type;
+        if (req.body.gpioDirection)
+            thing.gpioDirection = req.body.gpioDirection;
+        if (req.body.gpioPin)
+            thing.gpioPin = req.body.gpioPin;
+        return thing.save();
+    })
+    .then(function() {
+        res.status(200).json(thing);
+    })
+    .catch(function (e) {
+        errorHandlers.std(error, req, res);        
     });
 };

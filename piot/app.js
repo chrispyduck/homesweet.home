@@ -26,7 +26,9 @@ app.get('/things', things.getAll);
 app.put('/things', things.putOne);
 app.get('/things/:id', things.getOne);
 app.post('/things/:id', things.updateOne);
+app.get('/things/:id/:operation/:value', things.updateOne);
 app.delete('/things/:id', things.deleteOne);
+app.patch('/things/:id', things.configureOne);
 
 var errorHandlers = require('./api/errorHandlers.js');
 //app.use(errorHandlers.notFound);

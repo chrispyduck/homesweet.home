@@ -1,5 +1,4 @@
 ﻿"use strict";
-
 var Q = require('q');
 
 var gpio;
@@ -21,48 +20,69 @@ function PinManager() {
     var pins = {};
 
     var fromThingSync = function (thing) {
-        var pin = pins[thing];
+        var pin = pins[thing.id];
         if (!pin) {
             pin = new Pin(thing.gpioPin, thing.gpioDirection);
-            pins[thing] = pin;
+            pins[thing.id] = pin;
+            return pin
+                .open()
+                .then(function() { return pin; });
         } else if (pin.id != thing.gpioPin || pin.direction != thing.gpioDirection) {
             winston.log('info', 'reopening gpio pin %s due to reconfiguration', thing.gpioPin);
-            return pin.reopen();
+            return pin
+                .reopen()
+                .then(function() { return pin; });
         }
-        return pin;
+        return Q.when(pin);
     };
 
     this.fromThing = function (thing) {
         return Q.fcall(fromThingSync, thing);
     };
+
+    this.closeAll = function () {
+        for (var pin in pins) {
+            pins[pin].close();
+        }
+    };
 };
-module.exports = new PinManager();
+var pinManager = new PinManager();
+module.exports = pinManager;
 
 var Pin = function (id, direction) {
     this.id = parseInt(id, 10);
     this.direction = direction;
+    this.isOpen = false;
     
     var X = this;
 
     this.open = function () {
-        winston.log('info', 'opening gpio pin %s as "%s"', X.id, X.direction);
+        winston.log('info', 'opening gpio pin %d as "%s"', X.id, X.direction);
+        X.isOpen = true;
         return gpio.open(X.id, X.direction);
     };
     this.close = function () {
-        winston.log('info', 'closing gpio pin %s', X.id, X.direction);
+        winston.log('info', 'closing gpio pin %d', X.id, X.direction);
+        X.isOpen = false;
         return gpio.close(X.id);
     };
     this.reopen = function () {
         return X.close().then(X.open);
     };
     this.getValue = function () {
-	winston.log('info', 'reading value of gpio pin %s', X.id);
+        if (!X.isOpen)
+            X.open();
+	winston.log('info', 'reading value of gpio pin %d', X.id);
         return gpio.read(X.id);
     };
     this.setValue = function (value) {
-	winston.log('info', 'writing value of gpio pin %s = %s', X.id, value);
+        if (!X.isOpen)
+            X.open();
+	winston.log('info', 'writing value of gpio pin %d = %s', X.id, value);
         return gpio.write(X.id, value);
     };
-
-    this.open();
 };
+
+process.on('exit', function() { 
+    pinManager.closeAll();
+});
